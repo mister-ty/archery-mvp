@@ -9,6 +9,14 @@ const credentialsSchema = z.object({
   password: z.string().min(1)
 });
 
+console.log('[auth-debug]', {
+  hasAuthSecret: !!process.env.AUTH_SECRET,
+  authSecretLength: process.env.AUTH_SECRET?.length ?? 0,
+  hasDatabaseUrl: !!process.env.DATABASE_URL,
+  vercelEnv: process.env.VERCEL_ENV,
+  authKeys: Object.keys(process.env).filter((k) => k.includes('AUTH')),
+});
+
 export const authConfig: NextAuthConfig = {
   secret: process.env.AUTH_SECRET,
   trustHost: true,
