@@ -10,6 +10,8 @@ const credentialsSchema = z.object({
 });
 
 export const authConfig: NextAuthConfig = {
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
   session: { strategy: 'jwt', maxAge: 60 * 60 * 8 }, // 8h
   pages: { signIn: '/login' },
   providers: [
