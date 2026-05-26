@@ -147,6 +147,7 @@ model Athlete {
   sessions     TrainingSession[]
   attendances  Attendance[]
   competitions Competition[]
+  invitations  Invitation[]
 
   @@index([clubId])
   @@index([coachId])
@@ -186,6 +187,7 @@ model TrainingSession {
   createdById  String // userId who registered
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+  completedAt  DateTime?
 
   scoreSets    ScoreSet[]
   attendance       Attendance?
@@ -194,6 +196,7 @@ model TrainingSession {
   @@index([athleteId, date])
   @@index([date])
   @@index([sessionGroupId])
+  @@index([completedAt])
 }
 
 model ScoreSet {
@@ -262,12 +265,15 @@ model Invitation {
   role      Role
   clubId    String
   club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  athleteId String?
+  athlete   Athlete? @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([token])
   @@index([clubId])
+  @@index([athleteId])
 }
 
 // =============== Competitions (Fase 2.3) ===============

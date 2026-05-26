@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Role } from '@prisma/client';
-import { ChevronLeft, Target, Users } from 'lucide-react';
+import { ChevronLeft, Lock, Target, Users } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { getSessionForScoring } from '@/server/actions/sessions';
 import { getSessionObservations, getAllObservationTags } from '@/server/actions/observations';
@@ -9,10 +9,16 @@ import {
   getSessionAttendance,
   getGroupAttendance
 } from '@/server/actions/attendance';
+import {
+  canAthleteEdit,
+  canStaffEditPostCompletion,
+  editableUntil
+} from '@/lib/analytics/session-completion';
 import { ObservationForm } from '@/components/observations/ObservationForm';
 import { ObservationList } from '@/components/observations/ObservationList';
 import { AttendanceToggle } from '@/components/sessions/AttendanceToggle';
 import { GroupAttendanceList } from '@/components/sessions/GroupAttendanceList';
+import { SessionProgressLive } from '@/components/sessions/SessionProgressLive';
 import { Avatar } from '@/components/ui/avatar';
 import { SectionHeader } from '@/components/ui/page-header';
 
@@ -22,6 +28,15 @@ const SESSION_TYPE_LABEL: Record<string, string> = {
   COMPETITION_SIM: 'Sim. Competición',
   WARMUP: 'Calentamiento'
 };
+
+function formatEditableUntil(d: Date): string {
+  return d.toLocaleString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
 
 export default async function SessionDetailPage({
   params
@@ -39,6 +54,31 @@ export default async function SessionDetailPage({
     authSession?.user?.role === Role.COACH ||
     authSession?.user?.role === Role.CLUB_ADMIN ||
     authSession?.user?.role === Role.SUPER_ADMIN;
+  const isOwnerAthlete =
+    !!authSession?.user?.id &&
+    authSession.user.id === session.athlete.userId;
+
+  const completedAt = session.completedAt;
+  const isComplete = !!completedAt;
+  const staffInWindow = canStaffEditPostCompletion(completedAt);
+  const athleteCanEdit = canAthleteEdit(completedAt);
+  const canEditScores =
+    (isOwnerAthlete && athleteCanEdit) || (isStaff && staffInWindow);
+  const until = editableUntil(completedAt);
+
+  // Initial progress snapshot for live polling (computed from already-loaded data).
+  let initialArrows = 0;
+  let initialTotal = 0;
+  let lastArrowDate: Date | null = null;
+  for (const ss of session.scoreSets) {
+    initialTotal += ss.endsCount * ss.arrowsPerEnd;
+    initialArrows += ss.arrows.length;
+    for (const a of ss.arrows) {
+      if (!lastArrowDate || a.createdAt > lastArrowDate) {
+        lastArrowDate = a.createdAt;
+      }
+    }
+  }
 
   const [observations, allTags, attendance, groupAttendance] = await Promise.all([
     getSessionObservations(params.id),
@@ -95,6 +135,47 @@ export default async function SessionDetailPage({
         </div>
       </div>
 
+      {/* Status banner */}
+      {isStaff && !isComplete && (
+        <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4">
+          <div className="mb-3 flex items-start gap-2">
+            <Lock className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+            <div>
+              <p className="text-sm font-semibold">Sesión en progreso</p>
+              <p className="text-xs text-muted-foreground">
+                Solo el deportista puede capturar mientras la sesión está activa. Podrás corregir
+                durante 24 horas después de que la cierre.
+              </p>
+            </div>
+          </div>
+          <SessionProgressLive
+            sessionId={session.id}
+            initial={{
+              arrows: initialArrows,
+              total: initialTotal,
+              lastUpdatedAt: lastArrowDate ? lastArrowDate.toISOString() : null,
+              completedAt: null
+            }}
+          />
+        </div>
+      )}
+      {isStaff && isComplete && staffInWindow && until && (
+        <div className="rounded-xl border border-info/40 bg-info/10 p-3 text-sm">
+          <span className="font-medium">Modo corrección</span>
+          <span className="text-muted-foreground"> · puedes editar hasta el {formatEditableUntil(until)}</span>
+        </div>
+      )}
+      {isStaff && isComplete && !staffInWindow && (
+        <div className="rounded-xl border bg-muted/30 p-3 text-sm text-muted-foreground">
+          Sesión cerrada. La ventana de corrección expiró.
+        </div>
+      )}
+      {isOwnerAthlete && isComplete && athleteCanEdit && until && (
+        <div className="rounded-xl border border-info/40 bg-info/10 p-3 text-sm">
+          Tu sesión está cerrada. Puedes corregir hasta el {formatEditableUntil(until)}.
+        </div>
+      )}
+
       {/* Score sets */}
       <section>
         <SectionHeader title="Puntuaciones" />
@@ -104,12 +185,9 @@ export default async function SessionDetailPage({
             const done = ss.arrows.length;
             const expected = ss.endsCount * ss.arrowsPerEnd;
             const progress = expected > 0 ? Math.min(100, (done / expected) * 100) : 0;
-            return (
-              <Link
-                key={ss.id}
-                href={`/sesion/${session.id}/puntuacion?distance=${ss.distance}`}
-                className="group block rounded-xl border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover"
-              >
+
+            const cardInner = (
+              <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary">
@@ -122,9 +200,16 @@ export default async function SessionDetailPage({
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-primary transition group-hover:translate-x-0.5">
-                    Cargar →
-                  </span>
+                  {canEditScores ? (
+                    <span className="text-xs font-medium text-primary transition group-hover:translate-x-0.5">
+                      {isStaff ? 'Corregir →' : 'Cargar →'}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Lock className="h-3 w-3" />
+                      Solo lectura
+                    </span>
+                  )}
                 </div>
                 <div className="mt-3 h-1 w-full overflow-hidden rounded bg-muted">
                   <div
@@ -132,7 +217,24 @@ export default async function SessionDetailPage({
                     style={{ width: `${progress}%` }}
                   />
                 </div>
+              </>
+            );
+
+            return canEditScores ? (
+              <Link
+                key={ss.id}
+                href={`/sesion/${session.id}/puntuacion?distance=${ss.distance}`}
+                className="group block rounded-xl border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover"
+              >
+                {cardInner}
               </Link>
+            ) : (
+              <div
+                key={ss.id}
+                className="rounded-xl border bg-card p-4 shadow-sm"
+              >
+                {cardInner}
+              </div>
             );
           })}
         </div>

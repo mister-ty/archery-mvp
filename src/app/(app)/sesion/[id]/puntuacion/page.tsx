@@ -1,5 +1,6 @@
-import { notFound } from 'next/navigation';
-import { getSessionForScoring } from '@/server/actions/sessions';
+import { notFound, redirect } from 'next/navigation';
+import { getSessionForScoringStrict } from '@/server/actions/sessions';
+import { editableUntil } from '@/lib/analytics/session-completion';
 import ScoreCapture from '@/components/scoring/ScoreCapture';
 
 export default async function ScoringPage({
@@ -9,8 +10,9 @@ export default async function ScoringPage({
   params: { id: string };
   searchParams: { distance?: string };
 }) {
-  const session = await getSessionForScoring(params.id);
+  const { session, mode } = await getSessionForScoringStrict(params.id);
   if (!session) notFound();
+  if (mode === 'denied') redirect(`/sesion/${params.id}`);
 
   if (session.scoreSets.length === 0) {
     return (
@@ -56,6 +58,17 @@ export default async function ScoringPage({
 
       <ScoreCapture
         athleteName={athleteName}
+        mode={mode}
+        editableUntilLabel={
+          mode === 'staff-correction' && session.completedAt
+            ? editableUntil(session.completedAt)?.toLocaleString('es-CO', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              }) ?? null
+            : null
+        }
         scoreSet={{
           id: target.id,
           sessionId: session.id,

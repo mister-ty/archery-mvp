@@ -225,6 +225,7 @@ export async function acceptInvitation(
       email: true,
       role: true,
       clubId: true,
+      athleteId: true,
       expiresAt: true
     }
   });
@@ -277,6 +278,15 @@ export async function acceptInvitation(
           firstName: firstName!,
           lastName: lastName!
         }
+      });
+    }
+
+    // If this invitation was issued to link an existing athlete record
+    // (Fase 6 rescue flow), wire the User to the Athlete here.
+    if (inv.athleteId) {
+      await tx.athlete.update({
+        where: { id: inv.athleteId },
+        data: { userId: user.id }
       });
     }
 

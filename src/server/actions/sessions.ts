@@ -17,6 +17,10 @@ import {
   templateByKey,
   type AthleteSessionTemplate
 } from '@/lib/scoring/athlete-self-templates';
+import {
+  canAthleteEdit,
+  canStaffEditPostCompletion
+} from '@/lib/analytics/session-completion';
 
 /**
  * Create training session(s) — one per athlete.
@@ -43,10 +47,12 @@ export async function createTrainingSession(
   }
   const data = parsed.data;
 
-  // Validate athletes belong to a club the user can manage
+  // Validate athletes belong to a club the user can manage AND have a user account.
+  // Without a user account the athlete cannot capture their own scores, which
+  // is now required (coaches no longer capture during active sessions).
   const athletes = await db.athlete.findMany({
     where: { id: { in: data.athleteIds }, active: true },
-    select: { id: true, clubId: true }
+    select: { id: true, clubId: true, userId: true, firstName: true, lastName: true }
   });
   if (athletes.length !== data.athleteIds.length) {
     return { ok: false, error: 'Algún deportista no existe o está inactivo' };
@@ -54,6 +60,12 @@ export async function createTrainingSession(
   for (const a of athletes) {
     if (!canManageClub(session.user.role, session.user.clubId, a.clubId)) {
       return { ok: false, error: 'No tienes permiso sobre uno de los deportistas' };
+    }
+    if (!a.userId) {
+      return {
+        ok: false,
+        error: `${a.firstName} ${a.lastName} no tiene cuenta de usuario. Invítalo primero desde "Atletas sin cuenta".`
+      };
     }
   }
 
@@ -232,4 +244,113 @@ export async function getSessionForScoring(sessionId: string) {
   }
 
   return ts;
+}
+
+/**
+ * Strict wrapper for the /puntuacion page that decides if the caller can
+ * actually capture/edit scores right now, or should be sent to read-only.
+ *
+ * Modes:
+ *  - 'capture'           → athlete owns session and is within edit window (or it is active)
+ *  - 'staff-correction'  → staff editing a completed session within 24h
+ *  - 'denied'            → caller has no business being on the capture screen
+ */
+export async function getSessionForScoringStrict(sessionId: string) {
+  const ts = await getSessionForScoring(sessionId);
+  if (!ts) return { session: null, mode: 'denied' as const };
+
+  const session = await requireRole([
+    Role.COACH,
+    Role.CLUB_ADMIN,
+    Role.SUPER_ADMIN,
+    Role.ATHLETE
+  ]);
+
+  if (session.user.role === Role.ATHLETE) {
+    if (canAthleteEdit(ts.completedAt)) {
+      return { session: ts, mode: 'capture' as const };
+    }
+    return { session: ts, mode: 'denied' as const };
+  }
+
+  // Staff: only allowed for corrections within the 24h post-completion window.
+  if (canStaffEditPostCompletion(ts.completedAt)) {
+    return { session: ts, mode: 'staff-correction' as const };
+  }
+  return { session: ts, mode: 'denied' as const };
+}
+
+/**
+ * Lightweight snapshot of a session's capture progress, used by the coach's
+ * live-progress polling component. Reuses the same RBAC guard as
+ * getSessionForScoring (athlete must own; staff must share club).
+ */
+export async function getSessionProgressSnapshot(
+  sessionId: string
+): Promise<
+  ActionResult<{
+    arrows: number;
+    total: number;
+    lastUpdatedAt: string | null;
+    completedAt: string | null;
+  }>
+> {
+  const session = await requireRole([
+    Role.COACH,
+    Role.CLUB_ADMIN,
+    Role.SUPER_ADMIN,
+    Role.ATHLETE
+  ]);
+
+  const ts = await db.trainingSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      completedAt: true,
+      athlete: { select: { clubId: true, userId: true } },
+      scoreSets: {
+        select: {
+          endsCount: true,
+          arrowsPerEnd: true,
+          _count: { select: { arrows: true } }
+        }
+      }
+    }
+  });
+  if (!ts) return { ok: false, error: 'Sesión no encontrada' };
+
+  if (session.user.role === Role.ATHLETE) {
+    if (ts.athlete.userId !== session.user.id) {
+      return { ok: false, error: 'Sin permiso' };
+    }
+  } else if (
+    !canManageClub(session.user.role, session.user.clubId, ts.athlete.clubId)
+  ) {
+    return { ok: false, error: 'Sin permiso' };
+  }
+
+  let arrows = 0;
+  let total = 0;
+  for (const set of ts.scoreSets) {
+    total += set.endsCount * set.arrowsPerEnd;
+    arrows += set._count.arrows;
+  }
+
+  const lastArrow =
+    arrows > 0
+      ? await db.arrow.findFirst({
+          where: { scoreSet: { sessionId } },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true }
+        })
+      : null;
+
+  return {
+    ok: true,
+    data: {
+      arrows,
+      total,
+      lastUpdatedAt: lastArrow ? lastArrow.createdAt.toISOString() : null,
+      completedAt: ts.completedAt ? ts.completedAt.toISOString() : null
+    }
+  };
 }

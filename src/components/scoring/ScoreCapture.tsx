@@ -44,6 +44,8 @@ type ScoreSetInit = {
 type Props = {
   scoreSet: ScoreSetInit;
   athleteName: string;
+  mode?: 'capture' | 'staff-correction';
+  editableUntilLabel?: string | null;
 };
 
 type Captured = { endNumber: number; arrowNumber: number; value: ArrowValue };
@@ -84,7 +86,12 @@ function valueToScore(v: ArrowValue): number {
   return v;
 }
 
-export default function ScoreCapture({ scoreSet, athleteName }: Props) {
+export default function ScoreCapture({
+  scoreSet,
+  athleteName,
+  mode = 'capture',
+  editableUntilLabel = null
+}: Props) {
   const [isPending, startTransition] = useTransition();
   const [arrows, setArrows] = useState<Captured[]>(() =>
     scoreSet.arrows.map((a) => ({
@@ -392,6 +399,17 @@ export default function ScoreCapture({ scoreSet, athleteName }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
+      {mode === 'staff-correction' && (
+        <div className="rounded-xl border border-info/40 bg-info/10 p-3 text-xs">
+          <p className="font-semibold text-info">Modo corrección</p>
+          <p className="text-muted-foreground">
+            Estás editando una sesión cerrada.
+            {editableUntilLabel
+              ? ` La ventana expira el ${editableUntilLabel}.`
+              : ''}
+          </p>
+        </div>
+      )}
       {/* Sticky header with state */}
       <div className="sticky top-14 z-10 -mx-4 border-b bg-card/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
