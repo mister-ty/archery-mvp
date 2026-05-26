@@ -1,0 +1,302 @@
+// Archery MVP — Prisma schema
+// Decisions locked in previous round; only minor adjustments allowed here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============== Enums ===============
+
+enum Role {
+  ATHLETE
+  COACH
+  CLUB_ADMIN
+  SUPER_ADMIN
+}
+
+enum SessionType {
+  TECHNICAL
+  SERIES
+  COMPETITION_SIM
+  WARMUP
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  JUSTIFIED
+  LATE
+}
+
+enum WeatherCondition {
+  CALM
+  MODERATE
+  STRONG
+}
+
+enum DominantHand {
+  RIGHT
+  LEFT
+}
+
+// =============== Master tables ===============
+
+model BowModality {
+  id       String    @id @default(cuid())
+  code     String    @unique
+  name     String
+  active   Boolean   @default(true)
+  athletes Athlete[]
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  code     String    @unique
+  name     String
+  minAge   Int?
+  maxAge   Int?
+  active   Boolean   @default(true)
+  athletes Athlete[]
+}
+
+model ObservationTag {
+  id           String             @id @default(cuid())
+  code         String             @unique
+  name         String
+  observations CoachObservation[] @relation("ObservationTags")
+}
+
+// =============== Identity & org ===============
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clubId String?
+  club   Club?   @relation(fields: [clubId], references: [id])
+
+  athleteProfile Athlete?
+  coachProfile   Coach?
+
+  @@index([clubId])
+  @@index([role])
+}
+
+model Club {
+  id        String   @id @default(cuid())
+  name      String
+  city      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users    User[]
+  athletes    Athlete[]
+  coaches     Coach[]
+  invitations Invitation[]
+}
+
+model Coach {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clubId    String
+  club      Club    @relation(fields: [clubId], references: [id])
+  firstName String
+  lastName  String
+
+  athletes     Athlete[]
+  observations CoachObservation[]
+  sessionGroupsCreated SessionGroup[] @relation("SessionGroupCreator")
+
+  @@index([clubId])
+}
+
+model Athlete {
+  id            String      @id @default(cuid())
+  userId        String?     @unique
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  clubId        String
+  club          Club        @relation(fields: [clubId], references: [id])
+  coachId       String?
+  coach         Coach?      @relation(fields: [coachId], references: [id], onDelete: SetNull)
+  bowModalityId String
+  bowModality   BowModality @relation(fields: [bowModalityId], references: [id])
+  categoryId    String
+  category      Category    @relation(fields: [categoryId], references: [id])
+
+  firstName    String
+  lastName     String
+  documentId   String       @unique
+  birthDate    DateTime
+  dominantHand DominantHand
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  sessions     TrainingSession[]
+  attendances  Attendance[]
+  competitions Competition[]
+
+  @@index([clubId])
+  @@index([coachId])
+  @@index([bowModalityId])
+  @@index([active])
+}
+
+// =============== Sport core ===============
+
+model SessionGroup {
+  id        String   @id @default(cuid())
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  createdById String
+  createdBy   Coach  @relation("SessionGroupCreator", fields: [createdById], references: [id])
+
+  sessions TrainingSession[]
+
+  @@index([date])
+  @@index([createdById])
+}
+
+model TrainingSession {
+  id             String        @id @default(cuid())
+  athleteId      String
+  athlete        Athlete       @relation(fields: [athleteId], references: [id])
+  sessionGroupId String?
+  sessionGroup   SessionGroup? @relation(fields: [sessionGroupId], references: [id])
+
+  date         DateTime
+  type         SessionType
+  indoor       Boolean           @default(false)
+  weather      WeatherCondition?
+  weatherNotes String?
+  createdById  String // userId who registered
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  scoreSets    ScoreSet[]
+  attendance       Attendance?
+  observations     CoachObservation[]
+
+  @@index([athleteId, date])
+  @@index([date])
+  @@index([sessionGroupId])
+}
+
+model ScoreSet {
+  id           String          @id @default(cuid())
+  sessionId    String
+  session      TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  distance     Int
+  endsCount    Int
+  arrowsPerEnd Int
+  createdAt    DateTime        @default(now())
+
+  arrows Arrow[]
+
+  @@unique([sessionId, distance])
+  @@index([sessionId])
+}
+
+model Arrow {
+  id          String   @id @default(cuid())
+  scoreSetId  String
+  scoreSet    ScoreSet @relation(fields: [scoreSetId], references: [id], onDelete: Cascade)
+  endNumber   Int
+  arrowNumber Int
+  score       Int // 0..10
+  isX         Boolean  @default(false)
+  isMiss      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@unique([scoreSetId, endNumber, arrowNumber])
+  @@index([scoreSetId])
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  sessionId String           @unique
+  session   TrainingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  athleteId String
+  athlete   Athlete          @relation(fields: [athleteId], references: [id])
+  status    AttendanceStatus @default(PRESENT)
+  reason    String?
+
+  @@index([athleteId])
+}
+
+model CoachObservation {
+  id            String   @id @default(cuid())
+  sessionId     String
+  session       TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  coachId       String
+  coach         Coach    @relation(fields: [coachId], references: [id])
+  content       String
+  createdAt     DateTime @default(now())
+  editableUntil DateTime
+
+  tags ObservationTag[] @relation("ObservationTags")
+
+  @@index([sessionId])
+  @@index([coachId])
+}
+
+// =============== Invitations ===============
+
+model Invitation {
+  id        String   @id @default(cuid())
+  email     String
+  role      Role
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([clubId])
+}
+
+// =============== Competitions (Fase 2.3) ===============
+
+enum CompetitionType {
+  INDOOR_18M
+  OUTDOOR_70M
+  OUTDOOR_50M
+  FIELD
+  CLOUT
+  THREE_D
+  OTHER
+}
+
+model Competition {
+  id          String          @id @default(cuid())
+  athleteId   String
+  athlete     Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  createdById String          // userId who registered the entry
+  date        DateTime
+  name        String          // e.g. "Departamental Antioquia 2026"
+  type        CompetitionType
+  location    String?
+  totalScore  Int             // final score (0..2000+)
+  rank        Int?            // final position (1-based), optional
+  xCount      Int?            // total X (tie-breaker), optional
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([athleteId, date])
+  @@index([date])
+}

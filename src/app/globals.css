@@ -1,0 +1,209 @@
+@import "tw-animate-css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens.
+ *
+ * Tailwind reads these as `hsl(var(--token))`, so the values must be
+ * raw "H S% L%" components (no wrapping `hsl(...)`, no `oklch(...)`).
+ * The previous file mixed OKLCH literals which silently broke utilities
+ * like `bg-primary` and `text-primary-foreground`.
+ *
+ * Brand: archery green (#1a8a3f). Tuned variants for hover/dark.
+ */
+
+@layer base {
+  :root {
+    --background:            0 0% 100%;
+    --foreground:          222 47% 11%;
+
+    --card:                  0 0% 100%;
+    --card-foreground:     222 47% 11%;
+
+    --popover:               0 0% 100%;
+    --popover-foreground:  222 47% 11%;
+
+    --muted:               210 40% 96%;
+    --muted-foreground:    215 16% 47%;
+
+    --border:              214 32% 91%;
+    --input:               214 32% 91%;
+    --ring:                142 70% 32%;
+
+    --primary:             142 70% 32%;       /* archery green */
+    --primary-foreground:    0 0% 100%;
+    --primary-hover:       142 70% 27%;
+
+    --secondary:           210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --accent:              210 40% 96%;
+    --accent-foreground:   222 47% 11%;
+
+    --destructive:           0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success:             142 71% 45%;
+    --warning:              38 92% 50%;
+    --info:                221 83% 53%;
+
+    /* Recharts series — keep distinct from primary for legibility */
+    --chart-1: 221 83% 53%;   /* blue */
+    --chart-2: 0   84% 60%;   /* red  */
+    --chart-3: 142 71% 45%;   /* green */
+    --chart-4: 38  92% 50%;   /* amber */
+    --chart-5: 262 83% 58%;   /* violet */
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background:          222 47% 7%;
+    --foreground:          210 40% 98%;
+
+    --card:                222 47% 11%;
+    --card-foreground:     210 40% 98%;
+
+    --popover:             222 47% 11%;
+    --popover-foreground:  210 40% 98%;
+
+    --muted:               217 33% 17%;
+    --muted-foreground:    215 20% 65%;
+
+    --border:              217 33% 17%;
+    --input:               217 33% 17%;
+    --ring:                142 60% 50%;
+
+    --primary:             142 60% 45%;       /* brighter green for dark bg */
+    --primary-foreground:  222 47% 7%;
+    --primary-hover:       142 60% 50%;
+
+    --secondary:           217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --accent:              217 33% 17%;
+    --accent-foreground:   210 40% 98%;
+
+    --destructive:           0 70% 45%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success:             142 60% 45%;
+    --warning:              38 90% 55%;
+    --info:                213 90% 60%;
+
+    --chart-1: 213 90% 60%;
+    --chart-2: 0   75% 60%;
+    --chart-3: 142 60% 50%;
+    --chart-4: 38  90% 55%;
+    --chart-5: 270 80% 65%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+  html {
+    @apply font-sans;
+  }
+  /* Subtle focus ring polish — visible only for keyboard users */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  /* Better default selection color */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  /* Compact stacked layout helper used across cards */
+  .stack-tight > * + * {
+    margin-top: 0.25rem;
+  }
+  .stack-md > * + * {
+    margin-top: 0.75rem;
+  }
+
+  /* Subtle elevated card (above default border-only) */
+  .card-elevated {
+    @apply rounded-xl border bg-card shadow-sm;
+  }
+
+  /* Animated underline on hover (for inline links) */
+  .link-underline {
+    @apply relative;
+  }
+  .link-underline::after {
+    content: '';
+    @apply absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 bg-current opacity-70 transition-transform duration-200;
+  }
+  .link-underline:hover::after {
+    @apply scale-x-100;
+  }
+
+  /* Subtle gradient background for hero/auth screens */
+  .bg-brand-gradient {
+    background:
+      radial-gradient(at 20% 0%, hsl(var(--primary) / 0.12), transparent 50%),
+      radial-gradient(at 80% 100%, hsl(var(--info) / 0.08), transparent 50%),
+      hsl(var(--background));
+  }
+}
+
+@layer components {
+  /* Buttons with the brand "press" feel + accessible focus */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition active:scale-[0.98] hover:bg-[hsl(var(--primary-hover))] disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border bg-card px-3 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-destructive {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-destructive px-3 text-sm font-medium text-destructive-foreground transition hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Section header — used to keep h2s consistent across dashboards */
+  .section-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+
+  /*
+   * Legacy `.input` class still consumed by AthleteForm / SessionForm.
+   * Keeps a polished default; new forms should prefer the explicit
+   * tailwind class chain used by the auth pages.
+   */
+  .input {
+    @apply mt-1 h-10 w-full rounded-lg border bg-background px-3 text-sm shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:shadow-glow disabled:opacity-60;
+  }
+}
+
+@keyframes spinner-ring {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

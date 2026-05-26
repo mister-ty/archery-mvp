@@ -1,0 +1,47 @@
+{
+  "name": "Archery MVP",
+  "short_name": "Archery",
+  "description": "Seguimiento longitudinal de entrenamiento de tiro con arco",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "theme_color": "#1a8a3f",
+  "background_color": "#ffffff",
+  "lang": "es",
+  "categories": ["sports", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva sesión",
+      "short_name": "Sesión",
+      "url": "/sesion/nueva",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mi progreso",
+      "short_name": "Progreso",
+      "url": "/mi-progreso",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+coverage/
+prisma/migrations/dev.db*
+
+# Vercel
+.vercel/
+
+# Local dev screenshots & design iterations (kept local, regenerable)
+design-v4/
+design-v5/
+
+# Playwright artifacts
+playwright-report/
+test-results/
+
+# Local agent skill packages (not product code)
+.agents/

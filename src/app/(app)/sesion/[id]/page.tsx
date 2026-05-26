@@ -1,0 +1,189 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { Role } from '@prisma/client';
+import { ChevronLeft, Target, Users } from 'lucide-react';
+import { auth } from '@/lib/auth';
+import { getSessionForScoring } from '@/server/actions/sessions';
+import { getSessionObservations, getAllObservationTags } from '@/server/actions/observations';
+import {
+  getSessionAttendance,
+  getGroupAttendance
+} from '@/server/actions/attendance';
+import { ObservationForm } from '@/components/observations/ObservationForm';
+import { ObservationList } from '@/components/observations/ObservationList';
+import { AttendanceToggle } from '@/components/sessions/AttendanceToggle';
+import { GroupAttendanceList } from '@/components/sessions/GroupAttendanceList';
+import { Avatar } from '@/components/ui/avatar';
+import { SectionHeader } from '@/components/ui/page-header';
+
+const SESSION_TYPE_LABEL: Record<string, string> = {
+  TECHNICAL: 'Técnica',
+  SERIES: 'Series',
+  COMPETITION_SIM: 'Sim. Competición',
+  WARMUP: 'Calentamiento'
+};
+
+export default async function SessionDetailPage({
+  params
+}: {
+  params: { id: string };
+}) {
+  const [session, authSession] = await Promise.all([
+    getSessionForScoring(params.id),
+    auth()
+  ]);
+
+  if (!session) notFound();
+
+  const isStaff =
+    authSession?.user?.role === Role.COACH ||
+    authSession?.user?.role === Role.CLUB_ADMIN ||
+    authSession?.user?.role === Role.SUPER_ADMIN;
+
+  const [observations, allTags, attendance, groupAttendance] = await Promise.all([
+    getSessionObservations(params.id),
+    isStaff ? getAllObservationTags() : Promise.resolve([]),
+    getSessionAttendance(params.id),
+    isStaff && session.sessionGroupId
+      ? getGroupAttendance(session.sessionGroupId)
+      : Promise.resolve([])
+  ]);
+
+  const currentUserId = authSession?.user?.id ?? null;
+  const isGroup = !!session.sessionGroupId;
+
+  const fullName = `${session.athlete.firstName} ${session.athlete.lastName}`;
+  const typeLabel = SESSION_TYPE_LABEL[session.type] ?? session.type;
+
+  return (
+    <div className="space-y-6">
+      <Link
+        href={`/deportistas/${session.athlete.id}`}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground transition hover:text-foreground"
+      >
+        <ChevronLeft className="h-3 w-3" />
+        {fullName}
+      </Link>
+
+      {/* Hero band */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-5 shadow-card">
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar name={fullName} size="md" />
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+              Sesión · {typeLabel}
+            </p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
+              {fullName}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {new Date(session.date).toLocaleString('es-CO', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+              {isGroup && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 text-[10px] font-semibold text-info">
+                  <Users className="h-3 w-3" />
+                  Grupal
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Score sets */}
+      <section>
+        <SectionHeader title="Puntuaciones" />
+        <div className="space-y-2">
+          {session.scoreSets.map((ss) => {
+            const total = ss.arrows.reduce((acc, a) => acc + (a.isMiss ? 0 : a.score), 0);
+            const done = ss.arrows.length;
+            const expected = ss.endsCount * ss.arrowsPerEnd;
+            const progress = expected > 0 ? Math.min(100, (done / expected) * 100) : 0;
+            return (
+              <Link
+                key={ss.id}
+                href={`/sesion/${session.id}/puntuacion?distance=${ss.distance}`}
+                className="group block rounded-xl border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary">
+                      <Target className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{ss.distance}m</p>
+                      <p className="text-[11px] text-muted-foreground tabular-nums">
+                        {done}/{expected} flechas · total {total}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-medium text-primary transition group-hover:translate-x-0.5">
+                    Cargar →
+                  </span>
+                </div>
+                <div className="mt-3 h-1 w-full overflow-hidden rounded bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Attendance (F9) — staff only */}
+      {isStaff && (
+        <section>
+          <SectionHeader title="Asistencia" />
+          {isGroup ? (
+            <GroupAttendanceList rows={groupAttendance} />
+          ) : (
+            <div className="rounded-xl border bg-card p-4 shadow-card">
+              <AttendanceToggle
+                sessionId={params.id}
+                initialStatus={attendance?.status ?? null}
+                initialReason={attendance?.reason ?? null}
+                athleteLabel={fullName}
+              />
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Observations (F8) */}
+      <section>
+        <SectionHeader title="Observaciones del coach" />
+
+        {isStaff && (
+          <div className="mb-4 rounded-xl border bg-card p-4 shadow-card">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Nueva observación</p>
+            <ObservationForm sessionId={params.id} allTags={allTags} />
+          </div>
+        )}
+
+        <ObservationList
+          observations={observations.map((o) => ({
+            id: o.id,
+            content: o.content,
+            createdAt: o.createdAt,
+            editableUntil: o.editableUntil,
+            coachName: `${o.coach.firstName} ${o.coach.lastName}`,
+            coachId: o.coach.id,
+            coachUserId: o.coach.userId,
+            tags: o.tags,
+            sessionId: params.id
+          }))}
+          allTags={allTags}
+          currentUserId={currentUserId}
+        />
+      </section>
+    </div>
+  );
+}
