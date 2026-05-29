@@ -21,7 +21,19 @@ export const athleteCreateSchema = z.object({
   bowModalityId: z.string().cuid('Modalidad de arco inválida'),
   categoryId: z.string().cuid('Categoría inválida'),
   clubId: z.string().cuid('Club inválido'),
-  coachId: z.string().cuid().optional().nullable()
+  coachId: z.string().cuid().optional().nullable(),
+  /**
+   * Optional email for auto-invitation. When set, after the Athlete is
+   * created an Invitation is generated linked to the new athleteId; the
+   * athlete activates with `/activar/[token]` and the User-Athlete link
+   * is established automatically by `acceptInvitation`.
+   */
+  inviteEmail: z
+    .string()
+    .trim()
+    .email('Email inválido')
+    .optional()
+    .or(z.literal(''))
 });
 
 export const athleteUpdateSchema = athleteCreateSchema.partial().extend({

@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Plus, UserPlus } from 'lucide-react';
 import { Role } from '@prisma/client';
 import { auth } from '@/lib/auth';
 import { getClubTrend, getTeamDashboard } from '@/server/actions/dashboard';
@@ -54,6 +56,24 @@ export default async function EquipoPage() {
           eyebrow="Vista del coach"
           title="Mi Equipo"
           description={description}
+          actions={
+            <>
+              <Link
+                href="/deportistas/nuevo"
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm font-medium shadow-sm transition hover:bg-muted"
+              >
+                <UserPlus className="h-4 w-4" />
+                Nuevo deportista
+              </Link>
+              <Link
+                href="/sesion/nueva"
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-card transition hover:bg-primary-hover"
+              >
+                <Plus className="h-4 w-4" />
+                Nueva sesión
+              </Link>
+            </>
+          }
         />
         {count > 0 && <TeamSummaryBand summary={summary} />}
         {count > 0 && (

@@ -25,3 +25,6 @@ test-results/
 .agents/
 
 .vercel
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo

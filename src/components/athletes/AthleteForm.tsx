@@ -39,7 +39,8 @@ export default function AthleteForm({
       bowModalityId: String(fd.get('bowModalityId') ?? ''),
       categoryId: String(fd.get('categoryId') ?? ''),
       clubId: String(fd.get('clubId') ?? defaultClubId),
-      coachId: (String(fd.get('coachId') ?? '') || null) as string | null
+      coachId: (String(fd.get('coachId') ?? '') || null) as string | null,
+      inviteEmail: String(fd.get('inviteEmail') ?? '').trim()
     };
 
     startTransition(async () => {
@@ -49,7 +50,12 @@ export default function AthleteForm({
         if (res.fieldErrors) setErrors(res.fieldErrors as Record<string, string[]>);
         return;
       }
-      toast.success('Deportista creado');
+      const invitedTo = res.data.invitationEmail;
+      if (invitedTo) {
+        toast.success(`Deportista creado e invitado a ${invitedTo}`);
+      } else {
+        toast.success('Deportista creado');
+      }
       router.push('/deportistas');
       router.refresh();
     });
@@ -115,6 +121,21 @@ export default function AthleteForm({
             </option>
           ))}
         </select>
+      </Field>
+      <Field
+        label="Email para invitar (opcional)"
+        error={errors.inviteEmail?.[0]}
+      >
+        <input
+          name="inviteEmail"
+          type="email"
+          placeholder="atleta@email.com"
+          className="input"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Si lo llenas, se envía una invitación para que el atleta active su
+          cuenta y pueda capturar sus propios puntajes.
+        </p>
       </Field>
 
       <button

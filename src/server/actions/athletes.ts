@@ -60,7 +60,15 @@ export async function listAthletes(filters?: {
 
 export async function createAthlete(
   input: AthleteCreateInput
-): Promise<ActionResult<{ id: string }>> {
+): Promise<
+  ActionResult<{
+    id: string;
+    /** Email the invitation was sent to (only if inviteEmail was provided). */
+    invitationEmail?: string;
+    /** Activation link, surfaced when email sending fell back to console. */
+    invitationLink?: string;
+  }>
+> {
   const session = await requireRole([
     Role.COACH,
     Role.CLUB_ADMIN,
@@ -84,8 +92,27 @@ export async function createAthlete(
     return { ok: false, error: 'No tienes permiso sobre este club' };
   }
 
+  // If an inviteEmail was given, sanity-check it's not already in use before
+  // creating the Athlete so we don't end up with an Athlete that can never be
+  // linked. Empty string means "no invitation requested".
+  const wantedEmail = data.inviteEmail?.trim().toLowerCase();
+  if (wantedEmail) {
+    const clash = await db.user.findUnique({
+      where: { email: wantedEmail },
+      select: { id: true }
+    });
+    if (clash) {
+      return {
+        ok: false,
+        error: 'Ya existe un usuario con ese email',
+        fieldErrors: { inviteEmail: ['Email ya registrado'] }
+      };
+    }
+  }
+
+  let created: { id: string };
   try {
-    const created = await db.athlete.create({
+    created = await db.athlete.create({
       data: {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -99,9 +126,6 @@ export async function createAthlete(
       },
       select: { id: true }
     });
-
-    revalidatePath('/deportistas');
-    return { ok: true, data: created };
   } catch (e: unknown) {
     if (
       typeof e === 'object' &&
@@ -113,6 +137,62 @@ export async function createAthlete(
     }
     return { ok: false, error: 'Error al crear el deportista' };
   }
+
+  // Best-effort invitation. If email sending fails, the Athlete still
+  // exists and the admin can retry from /admin/atletas-sin-cuenta.
+  let sentTo: string | undefined;
+  let activationLink: string | undefined;
+  if (wantedEmail) {
+    try {
+      const token = generateInviteToken();
+      const expiresAt = new Date(
+        Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
+      );
+      await db.invitation.create({
+        data: {
+          email: wantedEmail,
+          role: Role.ATHLETE,
+          clubId: data.clubId,
+          athleteId: created.id,
+          token,
+          expiresAt
+        }
+      });
+      const club = await db.club.findUnique({
+        where: { id: data.clubId },
+        select: { name: true }
+      });
+      const link = buildInvitationLink(token);
+      const sendResult = await sendEmail(
+        invitationEmail({
+          to: wantedEmail,
+          role: Role.ATHLETE,
+          clubName: club?.name ?? 'tu club',
+          link,
+          expiresInDays: INVITE_TTL_DAYS
+        })
+      );
+      sentTo = wantedEmail;
+      // Surface the link when no real email provider is configured so the
+      // admin can copy it and share it manually.
+      if (sendResult.ok && sendResult.provider === 'console') {
+        activationLink = link;
+      }
+    } catch {
+      // Don't fail the whole action — the Athlete already exists.
+    }
+  }
+
+  revalidatePath('/deportistas');
+  revalidatePath('/admin/atletas-sin-cuenta');
+  return {
+    ok: true,
+    data: {
+      id: created.id,
+      invitationEmail: sentTo,
+      invitationLink: activationLink
+    }
+  };
 }
 
 export async function updateAthlete(
