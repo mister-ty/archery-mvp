@@ -163,7 +163,10 @@ export async function createAthlete(
         select: { name: true }
       });
       const link = buildInvitationLink(token);
-      const sendResult = await sendEmail(
+      // Always return the activation link so the admin can copy/share it
+      // manually. With Resend configured the email is also sent; without
+      // it the link is the only way for the athlete to activate.
+      await sendEmail(
         invitationEmail({
           to: wantedEmail,
           role: Role.ATHLETE,
@@ -173,11 +176,7 @@ export async function createAthlete(
         })
       );
       sentTo = wantedEmail;
-      // Surface the link when no real email provider is configured so the
-      // admin can copy it and share it manually.
-      if (sendResult.ok && sendResult.provider === 'console') {
-        activationLink = link;
-      }
+      activationLink = link;
     } catch {
       // Don't fail the whole action — the Athlete already exists.
     }

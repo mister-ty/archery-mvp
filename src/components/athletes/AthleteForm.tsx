@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Check, Copy, ExternalLink } from 'lucide-react';
 import { createAthlete } from '@/server/actions/athletes';
 
 type Option = { id: string; name: string };
@@ -15,6 +16,12 @@ type Props = {
   defaultClubId: string;
 };
 
+type SuccessState = {
+  athleteName: string;
+  invitedEmail: string;
+  activationLink: string;
+};
+
 export default function AthleteForm({
   modalities,
   categories,
@@ -25,6 +32,11 @@ export default function AthleteForm({
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [isPending, startTransition] = useTransition();
+  // When an invitation link comes back we stay on the page and show it
+  // so the admin can copy/share it. Without this they'd be redirected
+  // to /deportistas and the only place the link lived was the toast.
+  const [success, setSuccess] = useState<SuccessState | null>(null);
+  const [copied, setCopied] = useState(false);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,14 +63,103 @@ export default function AthleteForm({
         return;
       }
       const invitedTo = res.data.invitationEmail;
-      if (invitedTo) {
-        toast.success(`Deportista creado e invitado a ${invitedTo}`);
-      } else {
-        toast.success('Deportista creado');
+      const link = res.data.invitationLink;
+      if (invitedTo && link) {
+        toast.success(`Deportista creado · invitación lista para ${invitedTo}`);
+        setSuccess({
+          athleteName: `${input.firstName} ${input.lastName}`.trim(),
+          invitedEmail: invitedTo,
+          activationLink: link
+        });
+        // Refresh server-rendered lists in the background.
+        router.refresh();
+        return;
       }
+      toast.success('Deportista creado');
       router.push('/deportistas');
       router.refresh();
     });
+  }
+
+  async function copyLink() {
+    if (!success) return;
+    try {
+      await navigator.clipboard.writeText(success.activationLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('No se pudo copiar — selecciona el link manualmente');
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="rounded-xl border bg-card p-4 shadow-card">
+          <p className="text-sm font-semibold">
+            {success.athleteName} creado correctamente
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Comparte este link con <strong>{success.invitedEmail}</strong> para
+            que cree su contraseña y active su cuenta.
+          </p>
+          <div className="mt-3 flex items-stretch gap-2">
+            <input
+              readOnly
+              value={success.activationLink}
+              onFocus={(e) => e.currentTarget.select()}
+              className="h-11 flex-1 rounded-lg border bg-background px-3 text-xs tabular-nums"
+            />
+            <button
+              type="button"
+              onClick={copyLink}
+              className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4" /> Copiado
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" /> Copiar
+                </>
+              )}
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            El link expira en 7 días. Si lo pierdes puedes generarlo de nuevo
+            desde <strong>/admin/atletas-sin-cuenta</strong>.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={success.activationLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm font-medium transition hover:bg-muted"
+          >
+            <ExternalLink className="h-4 w-4" /> Abrir en otra pestaña
+          </a>
+          <button
+            type="button"
+            onClick={() => router.push('/deportistas')}
+            className="inline-flex h-10 items-center rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover"
+          >
+            Ir a deportistas
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSuccess(null);
+              setCopied(false);
+            }}
+            className="inline-flex h-10 items-center rounded-lg border px-3 text-sm font-medium transition hover:bg-muted"
+          >
+            Crear otro
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
