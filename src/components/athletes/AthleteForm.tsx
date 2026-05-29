@@ -91,8 +91,16 @@ export default function AthleteForm({
           ))}
         </select>
       </Field>
-      <Field label="Club">
-        <select name="clubId" required defaultValue={defaultClubId} className="input">
+      <Field label="Club" error={errors.clubId?.[0]}>
+        <select
+          name="clubId"
+          required
+          defaultValue={defaultClubId}
+          className="input"
+        >
+          {!defaultClubId && (
+            <option value="" disabled>Selecciona un club…</option>
+          )}
           {clubs.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}

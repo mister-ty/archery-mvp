@@ -48,7 +48,11 @@ export default async function NewAthletePage() {
         categories={categories}
         coaches={coaches}
         clubs={clubs}
-        defaultClubId={session.user.clubId ?? clubs[0]?.id ?? ''}
+        defaultClubId={
+          session.user.role === Role.SUPER_ADMIN
+            ? ''
+            : (session.user.clubId ?? clubs[0]?.id ?? '')
+        }
       />
     </div>
   );
