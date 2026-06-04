@@ -123,7 +123,11 @@ export async function saveScoreSet(
           arrowNumber: a.arrowNumber,
           score: dec.score,
           isX: dec.isX,
-          isMiss: dec.isMiss
+          isMiss: dec.isMiss,
+          // x/y persisted only when the athlete tapped the target;
+          // null for button-grid captures.
+          targetX: a.targetX ?? null,
+          targetY: a.targetY ?? null
         };
       })
     });

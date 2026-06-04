@@ -16,7 +16,12 @@ export type ArrowValue = z.infer<typeof arrowValueSchema>;
 export const arrowInputSchema = z.object({
   endNumber: z.number().int().min(1).max(20),
   arrowNumber: z.number().int().min(1).max(6),
-  value: arrowValueSchema
+  value: arrowValueSchema,
+  // Tap position on the target SVG, in viewBox coords (radius 100, centre 0,0).
+  // Null when the athlete captured via the number-pad instead of the target.
+  // Loose bounds (slack outside the outer ring) so a near-edge tap still saves.
+  targetX: z.number().min(-150).max(150).nullable().optional(),
+  targetY: z.number().min(-150).max(150).nullable().optional()
 });
 export type ArrowInput = z.infer<typeof arrowInputSchema>;
 

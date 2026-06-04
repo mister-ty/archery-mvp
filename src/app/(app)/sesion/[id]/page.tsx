@@ -19,6 +19,7 @@ import { ObservationList } from '@/components/observations/ObservationList';
 import { AttendanceToggle } from '@/components/sessions/AttendanceToggle';
 import { GroupAttendanceList } from '@/components/sessions/GroupAttendanceList';
 import { SessionProgressLive } from '@/components/sessions/SessionProgressLive';
+import { CoachLiveScoreSets } from '@/components/sessions/CoachLiveScoreSets';
 import { Avatar } from '@/components/ui/avatar';
 import { SectionHeader } from '@/components/ui/page-header';
 
@@ -138,7 +139,7 @@ export default async function SessionDetailPage({
       {/* Status banner */}
       {isStaff && !isComplete && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4">
-          <div className="mb-3 flex items-start gap-2">
+          <div className="flex items-start gap-2">
             <Lock className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
             <div>
               <p className="text-sm font-semibold">Sesión en progreso</p>
@@ -148,16 +149,18 @@ export default async function SessionDetailPage({
               </p>
             </div>
           </div>
-          <SessionProgressLive
-            sessionId={session.id}
-            initial={{
-              arrows: initialArrows,
-              total: initialTotal,
-              lastUpdatedAt: lastArrowDate ? lastArrowDate.toISOString() : null,
-              completedAt: null
-            }}
-          />
         </div>
+      )}
+      {!isStaff && !isComplete && (
+        <SessionProgressLive
+          sessionId={session.id}
+          initial={{
+            arrows: initialArrows,
+            total: initialTotal,
+            lastUpdatedAt: lastArrowDate ? lastArrowDate.toISOString() : null,
+            completedAt: null
+          }}
+        />
       )}
       {isStaff && isComplete && staffInWindow && until && (
         <div className="rounded-xl border border-info/40 bg-info/10 p-3 text-sm">
@@ -176,9 +179,40 @@ export default async function SessionDetailPage({
         </div>
       )}
 
-      {/* Score sets */}
+      {/* Score sets — live view for staff while the session is active,
+          standard cards (read-only or editable) otherwise. */}
       <section>
-        <SectionHeader title="Puntuaciones" />
+        <SectionHeader
+          title="Puntuaciones"
+          description={
+            isStaff && !isComplete
+              ? 'Vista en vivo · solo lectura mientras el deportista captura'
+              : undefined
+          }
+        />
+        {isStaff && !isComplete ? (
+          <CoachLiveScoreSets
+            sessionId={session.id}
+            initial={{
+              completedAt: null,
+              scoreSets: session.scoreSets.map((ss) => ({
+                id: ss.id,
+                distance: ss.distance,
+                endsCount: ss.endsCount,
+                arrowsPerEnd: ss.arrowsPerEnd,
+                arrows: ss.arrows.map((a) => ({
+                  endNumber: a.endNumber,
+                  arrowNumber: a.arrowNumber,
+                  score: a.score,
+                  isX: a.isX,
+                  isMiss: a.isMiss,
+                  targetX: a.targetX ?? null,
+                  targetY: a.targetY ?? null
+                }))
+              }))
+            }}
+          />
+        ) : (
         <div className="space-y-2">
           {session.scoreSets.map((ss) => {
             const total = ss.arrows.reduce((acc, a) => acc + (a.isMiss ? 0 : a.score), 0);
@@ -238,6 +272,7 @@ export default async function SessionDetailPage({
             );
           })}
         </div>
+        )}
       </section>
 
       {/* Attendance (F9) — staff only */}

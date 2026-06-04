@@ -223,6 +223,10 @@ model Arrow {
   score       Int // 0..10
   isX         Boolean  @default(false)
   isMiss      Boolean  @default(false)
+  // Tap position on the interactive target, viewBox-relative
+  // (radius 100, centre 0,0). Null when the athlete used the button grid.
+  targetX     Float?
+  targetY     Float?
   createdAt   DateTime @default(now())
 
   @@unique([scoreSetId, endNumber, arrowNumber])

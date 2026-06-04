@@ -354,3 +354,92 @@ export async function getSessionProgressSnapshot(
     }
   };
 }
+
+export type LiveScoreSetArrow = {
+  endNumber: number;
+  arrowNumber: number;
+  score: number;
+  isX: boolean;
+  isMiss: boolean;
+  targetX: number | null;
+  targetY: number | null;
+};
+export type LiveScoreSet = {
+  id: string;
+  distance: number;
+  endsCount: number;
+  arrowsPerEnd: number;
+  arrows: LiveScoreSetArrow[];
+};
+
+/**
+ * Snapshot of every arrow (with target position) in a session, scoped to
+ * a single training session. Used by the coach live-view to render the
+ * matrices + target dots in real time while the athlete is capturing.
+ *
+ * RBAC: athletes can only fetch their own session; staff must share the
+ * athlete's club. Same guards as `getSessionForScoring`.
+ */
+export async function getSessionLiveScoreSets(
+  sessionId: string
+): Promise<
+  ActionResult<{
+    completedAt: string | null;
+    scoreSets: LiveScoreSet[];
+  }>
+> {
+  const session = await requireRole([
+    Role.COACH,
+    Role.CLUB_ADMIN,
+    Role.SUPER_ADMIN,
+    Role.ATHLETE
+  ]);
+
+  const ts = await db.trainingSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      completedAt: true,
+      athlete: { select: { clubId: true, userId: true } },
+      scoreSets: {
+        orderBy: { distance: 'asc' },
+        select: {
+          id: true,
+          distance: true,
+          endsCount: true,
+          arrowsPerEnd: true,
+          arrows: {
+            orderBy: [{ endNumber: 'asc' }, { arrowNumber: 'asc' }],
+            select: {
+              endNumber: true,
+              arrowNumber: true,
+              score: true,
+              isX: true,
+              isMiss: true,
+              targetX: true,
+              targetY: true
+            }
+          }
+        }
+      }
+    }
+  });
+  if (!ts) return { ok: false, error: 'Sesión no encontrada' };
+
+  if (session.user.role === Role.ATHLETE) {
+    if (ts.athlete.userId !== session.user.id) {
+      return { ok: false, error: 'Sin permiso' };
+    }
+  } else if (
+    !canManageClub(session.user.role, session.user.clubId, ts.athlete.clubId)
+  ) {
+    return { ok: false, error: 'Sin permiso' };
+  }
+
+  return {
+    ok: true,
+    data: {
+      completedAt: ts.completedAt ? ts.completedAt.toISOString() : null,
+      scoreSets: ts.scoreSets
+    }
+  };
+}

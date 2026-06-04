@@ -23,6 +23,9 @@ export type BufferedArrow = {
   endNumber: number;
   arrowNumber: number;
   value: ArrowValue;
+  /** Tap position on the target SVG. Null/missing for button-grid captures. */
+  targetX?: number | null;
+  targetY?: number | null;
 };
 
 export type ScoreBuffer = {

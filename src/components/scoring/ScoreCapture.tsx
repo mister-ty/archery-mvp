@@ -38,6 +38,8 @@ type ScoreSetInit = {
     score: number;
     isX: boolean;
     isMiss: boolean;
+    targetX?: number | null;
+    targetY?: number | null;
   }>;
 };
 
@@ -48,7 +50,14 @@ type Props = {
   editableUntilLabel?: string | null;
 };
 
-type Captured = { endNumber: number; arrowNumber: number; value: ArrowValue };
+type Captured = {
+  endNumber: number;
+  arrowNumber: number;
+  value: ArrowValue;
+  /** Position on the target SVG; null when captured via button-grid. */
+  targetX?: number | null;
+  targetY?: number | null;
+};
 
 const SCORE_BUTTONS: { value: ArrowValue; label: string; tier: string }[] = [
   { value: 'X', label: 'X', tier: 'gold' },
@@ -97,7 +106,9 @@ export default function ScoreCapture({
     scoreSet.arrows.map((a) => ({
       endNumber: a.endNumber,
       arrowNumber: a.arrowNumber,
-      value: encodeArrowFromDb(a)
+      value: encodeArrowFromDb(a),
+      targetX: a.targetX ?? null,
+      targetY: a.targetY ?? null
     }))
   );
   const [editingArrow, setEditingArrow] = useState<{
@@ -121,11 +132,6 @@ export default function ScoreCapture({
     }
   }, []);
 
-  // ── Hit positions on the target (visual only — current end only) ───────
-  // Stored as a Map keyed by `${end}-${arrow}` so editing a slot replaces
-  // its dot. We don't persist these — refreshing the page drops them.
-  // Adding x/y to the Arrow schema would be the v2.
-  const [endHits, setEndHits] = useState<Map<string, TargetHit>>(new Map());
 
   // ── Offline / sync state ────────────────────────────────────────────────
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
@@ -156,7 +162,9 @@ export default function ScoreCapture({
           buf.arrows.map((a) => ({
             endNumber: a.endNumber,
             arrowNumber: a.arrowNumber,
-            value: a.value
+            value: a.value,
+            targetX: a.targetX ?? null,
+            targetY: a.targetY ?? null
           }))
         );
         setSyncStatus(buf.dirty ? 'pending' : 'synced');
@@ -205,7 +213,9 @@ export default function ScoreCapture({
         arrows: currentArrows.map((a) => ({
           endNumber: a.endNumber,
           arrowNumber: a.arrowNumber,
-          value: a.value
+          value: a.value,
+          targetX: a.targetX ?? null,
+          targetY: a.targetY ?? null
         }))
       });
       if (res.ok) {
@@ -215,7 +225,9 @@ export default function ScoreCapture({
           currentArrows.map((a) => ({
             endNumber: a.endNumber,
             arrowNumber: a.arrowNumber,
-            value: a.value
+            value: a.value,
+            targetX: a.targetX ?? null,
+            targetY: a.targetY ?? null
           }))
         );
         setSyncStatus('synced');
@@ -249,7 +261,9 @@ export default function ScoreCapture({
       arrows: arrows.map((a) => ({
         endNumber: a.endNumber,
         arrowNumber: a.arrowNumber,
-        value: a.value
+        value: a.value,
+        targetX: a.targetX ?? null,
+        targetY: a.targetY ?? null
       })),
       dirty: true,
       savedAt: null
@@ -308,7 +322,11 @@ export default function ScoreCapture({
   const tenCount = arrows.filter((a) => a.value === 10 || a.value === 'X')
     .length;
 
-  function handleScore(value: ArrowValue) {
+  function handleScore(
+    value: ArrowValue,
+    targetX: number | null = null,
+    targetY: number | null = null
+  ) {
     if (!nextSlot) return;
 
     // haptic
@@ -324,7 +342,13 @@ export default function ScoreCapture({
       );
       return [
         ...filtered,
-        { endNumber: nextSlot.end, arrowNumber: nextSlot.arrow, value }
+        {
+          endNumber: nextSlot.end,
+          arrowNumber: nextSlot.arrow,
+          value,
+          targetX,
+          targetY
+        }
       ];
     });
     setEditingArrow(null);
@@ -332,30 +356,31 @@ export default function ScoreCapture({
 
   function handleTargetTap(hit: TargetHit) {
     if (!nextSlot) return;
-    const key = `${nextSlot.end}-${nextSlot.arrow}`;
-    setEndHits((prev) => {
-      const next = new Map(prev);
-      next.set(key, hit);
-      return next;
-    });
-    handleScore(hit.value);
+    handleScore(hit.value, hit.x, hit.y);
   }
 
-  // Clear the visible hits whenever the current end changes — the dots
-  // are a per-end annotation, not a persisted record.
+  // Dots shown on the target = arrows of the current end that have an
+  // x/y position. Derived from `arrows` itself so that the coach (and
+  // the athlete after a refresh) sees the actual saved positions, not
+  // an ephemeral in-memory snapshot.
   const currentEndNumber = nextSlot?.end ?? null;
-  useEffect(() => {
-    if (currentEndNumber === null) return;
-    setEndHits((prev) => {
-      const next = new Map<string, TargetHit>();
-      for (const [key, hit] of prev) {
-        if (key.startsWith(`${currentEndNumber}-`)) next.set(key, hit);
-      }
-      return next;
-    });
-  }, [currentEndNumber]);
-
-  const currentEndHits = useMemo(() => Array.from(endHits.values()), [endHits]);
+  const currentEndHits = useMemo<TargetHit[]>(() => {
+    if (currentEndNumber === null) return [];
+    return arrows
+      .filter(
+        (a) =>
+          a.endNumber === currentEndNumber &&
+          a.targetX !== null &&
+          a.targetX !== undefined &&
+          a.targetY !== null &&
+          a.targetY !== undefined
+      )
+      .map((a) => ({
+        x: a.targetX as number,
+        y: a.targetY as number,
+        value: a.value
+      }));
+  }, [arrows, currentEndNumber]);
 
   function handleUndo() {
     setArrows((prev) => {

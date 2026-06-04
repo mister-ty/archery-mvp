@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Arrow" ADD COLUMN     "targetX" DOUBLE PRECISION,
+ADD COLUMN     "targetY" DOUBLE PRECISION;

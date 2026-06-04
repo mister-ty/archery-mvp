@@ -28,3 +28,6 @@ test-results/
 
 # TypeScript incremental build cache
 tsconfig.tsbuildinfo
+
+# Local debugging captures
+videos/
