@@ -9,6 +9,7 @@ import { ClubTrendChart } from '@/components/team/ClubTrendChart';
 import { TeamRoster } from '@/components/team/TeamRoster';
 import { TeamSummaryBand } from '@/components/team/TeamSummaryBand';
 import { ArrowJourneyBackground } from '@/components/decor/ArrowJourneyBackground';
+import { TeamCoachingBand } from '@/components/coaching/TeamCoachingBand';
 import { PageHeader, SectionHeader } from '@/components/ui/page-header';
 
 export default async function EquipoPage() {
@@ -76,6 +77,7 @@ export default async function EquipoPage() {
           }
         />
         {count > 0 && <TeamSummaryBand summary={summary} />}
+        {count > 0 && <TeamCoachingBand />}
         {count > 0 && (
           <section>
             <SectionHeader

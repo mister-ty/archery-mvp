@@ -17,6 +17,7 @@ import { ConsistencyChart } from '@/components/dashboard/ConsistencyChart';
 import { WeeklyVolumeChart } from '@/components/dashboard/WeeklyVolumeChart';
 import { AthleteUpcomingSessions } from '@/components/athlete/AthleteUpcomingSessions';
 import { ArrowJourneyBackground } from '@/components/decor/ArrowJourneyBackground';
+import { AthleteCoachingPanel } from '@/components/coaching/AthleteCoachingPanel';
 import { CompetitionForm } from '@/components/competitions/CompetitionForm';
 import { CompetitionList } from '@/components/competitions/CompetitionList';
 import { ExportButtons } from '@/components/reports/ExportButtons';
@@ -96,6 +97,8 @@ export default async function MiProgresoPage() {
         />
         <AthleteUpcomingSessions sessions={upcoming} />
       </section>
+
+      <AthleteCoachingPanel athleteId={athleteId} audience="athlete" />
 
       {/* KPI cards */}
       <section>

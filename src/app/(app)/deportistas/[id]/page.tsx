@@ -17,6 +17,7 @@ import { CompetitionList } from '@/components/competitions/CompetitionList';
 import { Avatar } from '@/components/ui/avatar';
 import { SectionHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
+import { AthleteCoachingPanel } from '@/components/coaching/AthleteCoachingPanel';
 
 const SESSION_TYPE_LABEL: Record<string, string> = {
   TECHNICAL: 'Técnica',
@@ -73,6 +74,9 @@ export default async function AthleteDetailPage({
           hasData={recentSessions.length > 0}
         />
       </div>
+
+      {/* Coaching tips for the coach viewing this athlete */}
+      <AthleteCoachingPanel athleteId={params.id} audience="coach" />
 
       {/* KPI cards */}
       <section>

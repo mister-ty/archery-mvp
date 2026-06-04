@@ -20,6 +20,7 @@ import {
   InteractiveTarget,
   type TargetHit
 } from '@/components/scoring/InteractiveTarget';
+import { SessionCloseTipsModal } from '@/components/coaching/SessionCloseTipsModal';
 
 const INPUT_MODE_KEY = 'archery.scoreInputMode';
 type InputMode = 'buttons' | 'target';
@@ -136,6 +137,11 @@ export default function ScoreCapture({
   // ── Offline / sync state ────────────────────────────────────────────────
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [isOnline, setIsOnline] = useState(true);
+  // Set once, after the server reports `nowCompleted: true` on the
+  // save that closed the session. Drives the post-session coaching tips
+  // panel; latching means re-saving (during the 24h edit window) does
+  // not re-trigger it.
+  const [sessionJustClosed, setSessionJustClosed] = useState(false);
   // True until the first mount-time buffer hydration has run. We use this
   // to avoid auto-saving the freshly-loaded state right back to the server.
   const hydratedRef = useRef(false);
@@ -234,6 +240,7 @@ export default function ScoreCapture({
         if (opts?.manual) {
           toast.success(`Guardado: ${res.data.arrowsSaved} flechas`);
         }
+        if (res.data.nowCompleted) setSessionJustClosed(true);
       } else {
         setSyncStatus('error');
         if (opts?.manual) toast.error(res.error);
@@ -424,6 +431,10 @@ export default function ScoreCapture({
 
   return (
     <div className="flex flex-col gap-4">
+      <SessionCloseTipsModal
+        sessionId={scoreSet.sessionId}
+        triggered={sessionJustClosed}
+      />
       {mode === 'staff-correction' && (
         <div className="rounded-xl border border-info/40 bg-info/10 p-3 text-xs">
           <p className="font-semibold text-info">Modo corrección</p>
