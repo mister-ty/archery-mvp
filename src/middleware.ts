@@ -10,8 +10,19 @@ import { checkRateLimit } from './lib/rate-limit';
  */
 export async function middleware(request: NextRequest) {
   // Bypass for automated tests — set DISABLE_RATE_LIMIT=1 in the dev server.
-  // Never enable in production.
   if (process.env.DISABLE_RATE_LIMIT === '1') {
+    return NextResponse.next();
+  }
+
+  // Auto-bypass on Vercel (or any serverless host) unless Upstash is
+  // configured: the in-memory Map limiter does not share state between
+  // lambda invocations, so it produces unpredictable 429s that lock
+  // real users out. Without a shared Redis the only correct behaviour
+  // is "no rate limit" — accept that as the cost of single-instance
+  // simplicity. Set UPSTASH_REDIS_REST_URL to opt back in.
+  const isServerless = process.env.VERCEL === '1';
+  const hasSharedStore = Boolean(process.env.UPSTASH_REDIS_REST_URL);
+  if (isServerless && !hasSharedStore) {
     return NextResponse.next();
   }
 
