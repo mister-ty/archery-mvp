@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stream-clipper"
+version = "0.1.0"
+description = "Convierte VODs de streams en clips verticales 9:16 listos para TikTok, con CTA hacia KICK"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2.7",
+    "PyYAML>=6.0",
+    "rich>=13.7",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# La transcripción real usa faster-whisper (descarga modelos de HuggingFace).
+# Se instala aparte para que el resto del pipeline y los tests no lo requieran.
+whisper = ["faster-whisper>=1.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+clipper = "stream_clipper.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["stream_clipper*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: tests lentos que requieren ffmpeg y generan video real",
+]
