@@ -17,7 +17,9 @@ async function gotoFirstScoreSet(page: Page) {
   const athleteHrefs = await page
     .locator('a[href^="/deportistas/"]')
     .evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-  const athleteHref = athleteHrefs.find((h) => h.length > '/deportistas/'.length);
+  const athleteHref = athleteHrefs.find(
+    (h) => h.startsWith('/deportistas/') && !h.endsWith('/nuevo')
+  );
   if (!athleteHref) throw new Error('no athletes seeded');
 
   await page.goto(athleteHref);

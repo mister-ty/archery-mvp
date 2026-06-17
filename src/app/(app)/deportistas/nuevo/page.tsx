@@ -1,8 +1,11 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
+import { ChevronLeft } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import AthleteForm from '@/components/athletes/AthleteForm';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default async function NewAthletePage() {
   const session = await auth();
@@ -41,8 +44,19 @@ export default async function NewAthletePage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-md space-y-4">
-      <h1 className="text-xl font-bold">Nuevo deportista</h1>
+    <div className="mx-auto max-w-md space-y-6">
+      <Link
+        href="/deportistas"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground transition hover:text-foreground"
+      >
+        <ChevronLeft className="h-3 w-3" />
+        Deportistas
+      </Link>
+      <PageHeader
+        eyebrow="Deportistas"
+        title="Nuevo deportista"
+        description="Crea el perfil para empezar el seguimiento de sus sesiones"
+      />
       <AthleteForm
         modalities={modalities}
         categories={categories}

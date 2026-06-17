@@ -110,8 +110,7 @@ export default async function ComparePage({
     arrowsLast30: Math.max(...rows.map((r) => r.arrowsLast30))
   };
 
-  const cellHighlight =
-    'font-semibold text-foreground bg-green-50 dark:bg-green-950/30';
+  const cellHighlight = 'font-semibold text-foreground bg-success/10';
 
   return (
     <div className="space-y-6">
@@ -128,6 +127,16 @@ export default async function ComparePage({
         title="Comparar deportistas"
         description={`${rows.length} deportistas · últimos 30 días + histórico`}
       />
+
+      {/* Legend for the best-of-group highlight — without it the green
+          cells read as "selected" instead of "best". */}
+      <p className="-mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span
+          className="inline-block h-3 w-3 rounded-sm bg-success/30 ring-1 ring-success/40"
+          aria-hidden
+        />
+        Mejor del grupo en cada métrica
+      </p>
 
       <div className="overflow-x-auto rounded-xl border bg-card shadow-card">
         <table className="w-full text-sm">

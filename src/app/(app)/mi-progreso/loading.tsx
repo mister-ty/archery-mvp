@@ -25,8 +25,17 @@ export default function ProgressLoading() {
       </div>
       <Skeleton className="h-3 w-32" />
       <Skeleton className="h-[260px] w-full rounded-xl" />
-      <Skeleton className="h-3 w-40" />
-      <Skeleton className="h-[200px] w-full rounded-xl" />
+      {/* Mirrors the lg 2-col chart grid (consistencia + volumen) */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-3">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-[200px] w-full rounded-xl" />
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-[200px] w-full rounded-xl" />
+        </div>
+      </div>
     </div>
   );
 }

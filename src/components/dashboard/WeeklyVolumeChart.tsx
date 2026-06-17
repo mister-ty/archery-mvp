@@ -11,6 +11,8 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
+import { BarChart3 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { WeeklyAgg } from '@/lib/analytics/training-load';
 
 type Props = {
@@ -44,9 +46,12 @@ export function WeeklyVolumeChart({ data }: Props) {
 
   if (chartData.length === 0 || totalArrows === 0) {
     return (
-      <div className="rounded-xl border p-6 text-center text-sm text-muted-foreground">
-        Sin actividad registrada en las últimas 12 semanas.
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        title="Sin actividad en las últimas 12 semanas"
+        description="El volumen semanal de flechas aparecerá al registrar sesiones."
+        compact
+      />
     );
   }
 

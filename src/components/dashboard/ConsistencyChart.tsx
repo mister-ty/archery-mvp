@@ -11,6 +11,8 @@ import {
   ReferenceLine,
   ResponsiveContainer
 } from 'recharts';
+import { Activity } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type DataPoint = {
   sessionId: string;
@@ -48,10 +50,12 @@ export function ConsistencyChart({ data }: Props) {
 
   if (chartData.length < 2) {
     return (
-      <div className="rounded-xl border p-6 text-center text-sm text-muted-foreground">
-        Necesitas al menos 2 sesiones con flechas válidas para ver la evolución
-        de la consistencia.
-      </div>
+      <EmptyState
+        icon={Activity}
+        title="Aún no hay suficientes datos"
+        description="Con 2 sesiones puntuadas verás la evolución de la consistencia."
+        compact
+      />
     );
   }
 

@@ -11,6 +11,8 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import { TrendingUp } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type DataPoint = {
   sessionId: string;
@@ -72,9 +74,12 @@ export function EvolutionChart({ data }: Props) {
 
   if (!data.length) {
     return (
-      <div className="rounded-xl border p-6 text-center text-sm text-muted-foreground">
-        Sin sesiones registradas aún.
-      </div>
+      <EmptyState
+        icon={TrendingUp}
+        title="Sin sesiones registradas aún"
+        description="La evolución por distancia aparecerá con la primera sesión puntuada."
+        compact
+      />
     );
   }
 

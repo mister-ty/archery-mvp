@@ -1,7 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
-import { ArrowRight, UserCircle2 } from 'lucide-react';
+import {
+  ArrowRight,
+  CalendarDays,
+  ChevronDown,
+  Crosshair,
+  Target,
+  Trophy,
+  UserCircle2
+} from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import {
@@ -104,10 +112,32 @@ export default async function MiProgresoPage() {
       <section>
         <SectionHeader title="Últimos 30 días" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard label="Promedio" value={data.kpis.avgLast30} unit="pts" />
-          <KpiCard label="Mejor ronda" value={data.kpis.bestRound} unit="pts" />
-          <KpiCard label="Flechas" value={data.kpis.arrowsThisMonth} />
-          <KpiCard label="Sesiones" value={data.kpis.sessionsThisMonth} />
+          <KpiCard
+            label="Promedio"
+            value={data.kpis.avgLast30}
+            unit="pts"
+            icon={Target}
+            hint="por flecha"
+          />
+          <KpiCard
+            label="Mejor ronda"
+            value={data.kpis.bestRound}
+            unit="pts"
+            icon={Trophy}
+            hint="máx. en una ronda"
+          />
+          <KpiCard
+            label="Flechas"
+            value={data.kpis.arrowsThisMonth}
+            icon={Crosshair}
+            hint="volumen del mes"
+          />
+          <KpiCard
+            label="Sesiones"
+            value={data.kpis.sessionsThisMonth}
+            icon={CalendarDays}
+            hint="entrenamientos"
+          />
           <ConsistencyKpiCard
             current={data.kpis.stddevLast30}
             previous={data.kpis.stddevPrev30}
@@ -125,17 +155,18 @@ export default async function MiProgresoPage() {
         <EvolutionChart data={data.evolution} />
       </section>
 
-      {/* Consistency chart (Fase 2.1) */}
-      <section>
-        <SectionHeader title="Evolución de consistencia" />
-        <ConsistencyChart data={data.consistencyTrend} />
-      </section>
-
-      {/* Weekly training volume (Fase 2.2) */}
-      <section>
-        <SectionHeader title="Volumen de entrenamiento" />
-        <WeeklyVolumeChart data={data.trainingLoad.weekly} />
-      </section>
+      {/* Consistency + volume side by side on wide screens — shortens the
+          scroll and lets both signals be read at a glance. */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section>
+          <SectionHeader title="Evolución de consistencia" />
+          <ConsistencyChart data={data.consistencyTrend} />
+        </section>
+        <section>
+          <SectionHeader title="Volumen de entrenamiento" />
+          <WeeklyVolumeChart data={data.trainingLoad.weekly} />
+        </section>
+      </div>
 
       {/* Recent sessions */}
       <section>
@@ -225,12 +256,21 @@ export default async function MiProgresoPage() {
               : undefined
           }
         />
-        <div className="mb-3 rounded-xl border bg-card p-4 shadow-card">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {/* Collapsed by default: the common case here is consulting the
+            history, not registering — the open form pushed the list far
+            down the page. Native <details>, no client JS. */}
+        <details className="group mb-3 rounded-xl border bg-card shadow-card">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 p-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition hover:text-foreground">
             Registrar nueva competición
-          </p>
-          <CompetitionForm athleteId={athleteId} />
-        </div>
+            <ChevronDown
+              className="h-4 w-4 transition group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="border-t p-4">
+            <CompetitionForm athleteId={athleteId} />
+          </div>
+        </details>
         <CompetitionList competitions={competitions} canEdit />
       </section>
     </div>

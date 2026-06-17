@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
+import { ChevronLeft } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { InviteForm } from '@/components/admin/InviteForm';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default async function NewInvitationPage() {
   const session = await auth();
@@ -27,24 +29,22 @@ export default async function NewInvitationPage() {
   });
 
   return (
-    <div className="mx-auto max-w-md space-y-4">
-      <div>
-        <Link
-          href="/admin/usuarios"
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          ← Usuarios
-        </Link>
-      </div>
+    <div className="mx-auto max-w-md space-y-6">
+      <Link
+        href="/admin/usuarios"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground transition hover:text-foreground"
+      >
+        <ChevronLeft className="h-3 w-3" />
+        Usuarios
+      </Link>
 
-      <div>
-        <h1 className="text-xl font-bold">Nueva invitación</h1>
-        <p className="text-xs text-muted-foreground">
-          Genera un link de activación para que el usuario cree su cuenta.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Administración"
+        title="Nueva invitación"
+        description="Genera un link de activación para que el usuario cree su cuenta"
+      />
 
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl border bg-card p-4 shadow-card">
         <InviteForm
           callerRole={role}
           callerClubId={session.user.clubId}

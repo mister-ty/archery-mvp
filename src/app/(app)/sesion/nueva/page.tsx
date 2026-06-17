@@ -3,30 +3,31 @@ import { Role } from '@prisma/client';
 import { auth } from '@/lib/auth';
 import { listAthletes } from '@/server/actions/athletes';
 import SessionForm from '@/components/sessions/SessionForm';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default async function NewSessionPage() {
   const session = await auth();
   if (!session) redirect('/login');
 
+  // Athletes have their own self-session flow — send them there instead
+  // of showing a dead-end "staff only" message.
   if (
     !([Role.COACH, Role.CLUB_ADMIN, Role.SUPER_ADMIN] as Role[]).includes(
       session.user.role
     )
   ) {
-    return (
-      <div className="rounded-xl border p-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Solo coaches y administradores pueden crear sesiones en esta fase.
-        </p>
-      </div>
-    );
+    redirect('/mi-progreso/nueva-sesion');
   }
 
   const athletes = await listAthletes({ activeOnly: true });
 
   return (
-    <div className="mx-auto max-w-md space-y-4">
-      <h1 className="text-xl font-bold">Nueva sesión</h1>
+    <div className="mx-auto max-w-md space-y-6">
+      <PageHeader
+        eyebrow="Sesión"
+        title="Nueva sesión"
+        description="Selecciona deportistas, tipo y distancias para empezar a capturar"
+      />
       <SessionForm athletes={athletes} />
     </div>
   );

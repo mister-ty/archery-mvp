@@ -1,7 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Role } from '@prisma/client';
-import { ChevronLeft, Trophy } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronLeft,
+  Crosshair,
+  Medal,
+  Target,
+  Trophy
+} from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { getAthleteDashboard } from '@/server/actions/dashboard';
 import { listAthleteCompetitions } from '@/server/actions/competitions';
@@ -18,13 +25,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { SectionHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AthleteCoachingPanel } from '@/components/coaching/AthleteCoachingPanel';
-
-const SESSION_TYPE_LABEL: Record<string, string> = {
-  TECHNICAL: 'Técnica',
-  SERIES: 'Series',
-  COMPETITION_SIM: 'Sim. Competición',
-  WARMUP: 'Calentamiento'
-};
+import { SESSION_TYPE_LABEL } from '@/lib/session-labels';
 
 export default async function AthleteDetailPage({
   params
@@ -67,6 +68,16 @@ export default async function AthleteDetailPage({
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
               {fullName}
             </h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground/80">
+                <Target className="h-3 w-3 text-primary" aria-hidden />
+                {athlete.bowModality}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground/80">
+                <Medal className="h-3 w-3 text-primary" aria-hidden />
+                {athlete.category}
+              </span>
+            </div>
           </div>
         </div>
         <ExportButtons
@@ -82,10 +93,32 @@ export default async function AthleteDetailPage({
       <section>
         <SectionHeader title="Últimos 30 días" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard label="Promedio" value={kpis.avgLast30} unit="pts" />
-          <KpiCard label="Mejor ronda" value={kpis.bestRound} unit="pts" />
-          <KpiCard label="Flechas (mes)" value={kpis.arrowsThisMonth} />
-          <KpiCard label="Sesiones (mes)" value={kpis.sessionsThisMonth} />
+          <KpiCard
+            label="Promedio"
+            value={kpis.avgLast30}
+            unit="pts"
+            icon={Target}
+            hint="por flecha"
+          />
+          <KpiCard
+            label="Mejor ronda"
+            value={kpis.bestRound}
+            unit="pts"
+            icon={Trophy}
+            hint="máx. en una ronda"
+          />
+          <KpiCard
+            label="Flechas (mes)"
+            value={kpis.arrowsThisMonth}
+            icon={Crosshair}
+            hint="volumen tirado"
+          />
+          <KpiCard
+            label="Sesiones (mes)"
+            value={kpis.sessionsThisMonth}
+            icon={CalendarDays}
+            hint="entrenamientos"
+          />
           <ConsistencyKpiCard
             current={kpis.stddevLast30}
             previous={kpis.stddevPrev30}
@@ -103,17 +136,18 @@ export default async function AthleteDetailPage({
         <EvolutionChart data={evolution} />
       </section>
 
-      {/* Consistency chart (Fase 2.1) */}
-      <section>
-        <SectionHeader title="Evolución de consistencia" />
-        <ConsistencyChart data={data.consistencyTrend} />
-      </section>
-
-      {/* Weekly training volume (Fase 2.2) */}
-      <section>
-        <SectionHeader title="Volumen de entrenamiento" />
-        <WeeklyVolumeChart data={data.trainingLoad.weekly} />
-      </section>
+      {/* Consistency + volume side by side on wide screens — shortens the
+          scroll and lets the coach read both signals at a glance. */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section>
+          <SectionHeader title="Evolución de consistencia" />
+          <ConsistencyChart data={data.consistencyTrend} />
+        </section>
+        <section>
+          <SectionHeader title="Volumen de entrenamiento" />
+          <WeeklyVolumeChart data={data.trainingLoad.weekly} />
+        </section>
+      </div>
 
       {/* Recent sessions */}
       <section>

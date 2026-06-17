@@ -13,7 +13,7 @@ test.describe('Competitions + Compare (Fase 2.3 + 2.4)', () => {
       .locator('a[href^="/deportistas/"]')
       .evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
     const athleteHref = athleteHrefs.find(
-      (h) => h.length > '/deportistas/'.length
+      (h) => h.startsWith('/deportistas/') && !h.endsWith('/nuevo')
     );
     expect(athleteHref).toBeTruthy();
     await page.goto(athleteHref!);

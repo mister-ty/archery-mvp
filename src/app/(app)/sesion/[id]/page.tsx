@@ -22,13 +22,7 @@ import { SessionProgressLive } from '@/components/sessions/SessionProgressLive';
 import { CoachLiveScoreSets } from '@/components/sessions/CoachLiveScoreSets';
 import { Avatar } from '@/components/ui/avatar';
 import { SectionHeader } from '@/components/ui/page-header';
-
-const SESSION_TYPE_LABEL: Record<string, string> = {
-  TECHNICAL: 'Técnica',
-  SERIES: 'Series',
-  COMPETITION_SIM: 'Sim. Competición',
-  WARMUP: 'Calentamiento'
-};
+import { SESSION_TYPE_LABEL } from '@/lib/session-labels';
 
 function formatEditableUntil(d: Date): string {
   return d.toLocaleString('es-CO', {

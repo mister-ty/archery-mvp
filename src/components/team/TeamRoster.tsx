@@ -3,7 +3,16 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Clock, GitCompare } from 'lucide-react';
+import {
+  AlertTriangle,
+  Clock,
+  GitCompare,
+  TrendingDown,
+  TrendingUp,
+  Users
+} from 'lucide-react';
+import { Avatar } from '@/components/ui/avatar';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { TeamAthlete } from '@/server/actions/dashboard';
 
 type Props = {
@@ -11,6 +20,15 @@ type Props = {
 };
 
 const MAX_COMPARE = 6;
+
+/** "hoy" / "hace 3d" — faster to scan than an absolute date in a dense table. */
+function relativeDays(date: Date | string): string {
+  const days = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000)
+  );
+  return days === 0 ? 'hoy' : `hace ${days}d`;
+}
 
 export function TeamRoster({ athletes }: Props) {
   const router = useRouter();
@@ -42,15 +60,15 @@ export function TeamRoster({ athletes }: Props) {
     <>
       {/* Alert banner */}
       {alerts.length > 0 && (
-        <div className="rounded-xl border border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30 p-4 space-y-1">
-          <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-400 flex items-center gap-1.5">
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 space-y-1">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
             <AlertTriangle className="h-4 w-4" />
             {alerts.length} deportista{alerts.length > 1 ? 's' : ''} requiere
             {alerts.length === 1 ? '' : 'n'} atención
           </p>
           <ul className="space-y-0.5">
             {alerts.map((a) => (
-              <li key={a.id} className="text-xs text-yellow-700 dark:text-yellow-400">
+              <li key={a.id} className="text-xs text-amber-700 dark:text-amber-300">
                 <Link
                   href={`/deportistas/${a.id}`}
                   className="hover:underline font-medium"
@@ -68,12 +86,16 @@ export function TeamRoster({ athletes }: Props) {
       )}
 
       {athletes.length === 0 ? (
-        <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">
-          No hay deportistas activos.{' '}
-          <Link href="/deportistas" className="text-primary underline">
-            Añadir deportistas
-          </Link>
-        </div>
+        <EmptyState
+          icon={Users}
+          title="No hay deportistas activos"
+          description="Crea o invita a tus deportistas para empezar el seguimiento del equipo."
+          action={
+            <Link href="/deportistas/nuevo" className="btn-primary h-9">
+              Añadir deportista
+            </Link>
+          }
+        />
       ) : (
         <>
           {/* Desktop table */}
@@ -104,7 +126,7 @@ export function TeamRoster({ athletes }: Props) {
                           disabled={atCapacity}
                           onChange={() => toggle(a.id)}
                           aria-label={`Seleccionar ${a.firstName} ${a.lastName} para comparar`}
-                          className="h-4 w-4 accent-primary disabled:opacity-40 cursor-pointer"
+                          className="h-5 w-5 accent-primary disabled:opacity-40 cursor-pointer"
                         />
                       </td>
                       <td className="py-2.5 pr-4">
@@ -112,11 +134,15 @@ export function TeamRoster({ athletes }: Props) {
                           href={`/deportistas/${a.id}`}
                           className="flex items-center gap-2 font-medium hover:text-primary"
                         >
+                          <Avatar
+                            name={`${a.firstName} ${a.lastName}`}
+                            size="xs"
+                          />
                           {a.alert !== 'none' && (
                             <AlertTriangle
                               className={`h-3.5 w-3.5 shrink-0 ${
                                 a.alert === 'inactive'
-                                  ? 'text-yellow-500'
+                                  ? 'text-amber-500'
                                   : 'text-red-500'
                               }`}
                             />
@@ -136,12 +162,17 @@ export function TeamRoster({ athletes }: Props) {
                       <td className="py-2.5 pr-4 text-right tabular-nums">
                         {a.delta !== null ? (
                           <span
-                            className={
+                            className={`inline-flex items-center justify-end gap-1 ${
                               a.delta >= 0
                                 ? 'text-green-600 dark:text-green-400'
                                 : 'text-red-600 dark:text-red-400'
-                            }
+                            }`}
                           >
+                            {a.delta >= 0 ? (
+                              <TrendingUp className="h-3.5 w-3.5" aria-hidden />
+                            ) : (
+                              <TrendingDown className="h-3.5 w-3.5" aria-hidden />
+                            )}
                             {a.delta >= 0 ? '+' : ''}
                             {a.delta}
                           </span>
@@ -154,14 +185,17 @@ export function TeamRoster({ athletes }: Props) {
                       </td>
                       <td className="py-2.5 text-right text-muted-foreground">
                         {a.lastSessionDate ? (
-                          <span className="flex items-center justify-end gap-1">
-                            {a.alert === 'inactive' && (
-                              <Clock className="h-3.5 w-3.5 text-yellow-500" />
-                            )}
-                            {new Date(a.lastSessionDate).toLocaleDateString(
+                          <span
+                            className="flex items-center justify-end gap-1 tabular-nums"
+                            title={new Date(a.lastSessionDate).toLocaleDateString(
                               'es-CO',
-                              { day: 'numeric', month: 'short' }
+                              { day: 'numeric', month: 'short', year: 'numeric' }
                             )}
+                          >
+                            {a.alert === 'inactive' && (
+                              <Clock className="h-3.5 w-3.5 text-amber-500" />
+                            )}
+                            {relativeDays(a.lastSessionDate)}
                           </span>
                         ) : (
                           '—'
@@ -182,7 +216,7 @@ export function TeamRoster({ athletes }: Props) {
               return (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border p-4"
+                  className="flex items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-sm"
                 >
                   <input
                     type="checkbox"
@@ -190,36 +224,41 @@ export function TeamRoster({ athletes }: Props) {
                     disabled={atCapacity}
                     onChange={() => toggle(a.id)}
                     aria-label={`Seleccionar ${a.firstName} ${a.lastName}`}
-                    className="h-4 w-4 accent-primary disabled:opacity-40 cursor-pointer"
+                    className="h-5 w-5 shrink-0 accent-primary disabled:opacity-40 cursor-pointer"
                   />
                   <Link
                     href={`/deportistas/${a.id}`}
-                    className="flex-1 min-w-0"
+                    className="flex flex-1 min-w-0 items-center gap-3"
                   >
-                    <p className="flex items-center gap-1.5 font-medium text-sm">
-                      {a.alert !== 'none' && (
-                        <AlertTriangle
-                          className={`h-3.5 w-3.5 ${
-                            a.alert === 'inactive'
-                              ? 'text-yellow-500'
-                              : 'text-red-500'
-                          }`}
-                        />
+                    <Avatar
+                      name={`${a.firstName} ${a.lastName}`}
+                      size="sm"
+                      className="shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5 font-medium text-sm">
+                        {a.alert !== 'none' && (
+                          <AlertTriangle
+                            className={`h-3.5 w-3.5 shrink-0 ${
+                              a.alert === 'inactive'
+                                ? 'text-amber-500'
+                                : 'text-red-500'
+                            }`}
+                          />
+                        )}
+                        <span className="truncate">
+                          {a.firstName} {a.lastName}
+                        </span>
+                      </span>
+                      <span className="block text-xs text-muted-foreground truncate">
+                        {a.bowModality} · {a.category}
+                      </span>
+                      {a.lastSessionDate && (
+                        <span className="block text-xs text-muted-foreground tabular-nums">
+                          Última: {relativeDays(a.lastSessionDate)}
+                        </span>
                       )}
-                      {a.firstName} {a.lastName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {a.bowModality} · {a.category}
-                    </p>
-                    {a.lastSessionDate && (
-                      <p className="text-xs text-muted-foreground">
-                        Última:{' '}
-                        {new Date(a.lastSessionDate).toLocaleDateString('es-CO', {
-                          day: 'numeric',
-                          month: 'short'
-                        })}
-                      </p>
-                    )}
+                    </span>
                   </Link>
                   <div className="text-right shrink-0">
                     <p className="text-xl font-bold tabular-nums">
@@ -227,12 +266,17 @@ export function TeamRoster({ athletes }: Props) {
                     </p>
                     {a.delta !== null && (
                       <p
-                        className={`text-xs tabular-nums ${
+                        className={`flex items-center justify-end gap-0.5 text-xs tabular-nums ${
                           a.delta >= 0
                             ? 'text-green-600 dark:text-green-400'
                             : 'text-red-600 dark:text-red-400'
                         }`}
                       >
+                        {a.delta >= 0 ? (
+                          <TrendingUp className="h-3 w-3" aria-hidden />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" aria-hidden />
+                        )}
                         {a.delta >= 0 ? '+' : ''}
                         {a.delta}
                       </p>

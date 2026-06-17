@@ -11,6 +11,8 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
+import { BarChart3 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { WeeklyClubAgg } from '@/lib/analytics/team-aggregate';
 
 type Props = {
@@ -45,9 +47,12 @@ export function ClubTrendChart({ data }: Props) {
 
   if (chartData.length === 0 || totalArrows === 0) {
     return (
-      <div className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">
-        Sin actividad del club en las últimas {chartData.length || 12} semanas.
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        title={`Sin actividad del club en las últimas ${chartData.length || 12} semanas`}
+        description="La tendencia agregada aparecerá cuando el equipo registre sesiones."
+        compact
+      />
     );
   }
 

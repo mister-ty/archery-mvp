@@ -23,7 +23,11 @@ export default function AthleteLoading() {
         ))}
       </div>
       <Skeleton className="h-[260px] w-full rounded-xl" />
-      <Skeleton className="h-[200px] w-full rounded-xl" />
+      {/* Mirrors the lg 2-col chart grid (consistencia + volumen) */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Skeleton className="h-[200px] w-full rounded-xl" />
+        <Skeleton className="h-[200px] w-full rounded-xl" />
+      </div>
     </div>
   );
 }

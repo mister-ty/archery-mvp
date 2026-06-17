@@ -12,7 +12,9 @@ test.describe('Attendance (F9)', () => {
     const athleteHrefs = await page
       .locator('a[href^="/deportistas/"]')
       .evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-    const athleteHref = athleteHrefs.find((h) => h.length > '/deportistas/'.length);
+    const athleteHref = athleteHrefs.find(
+      (h) => h.startsWith('/deportistas/') && !h.endsWith('/nuevo')
+    );
     expect(athleteHref, 'need at least one athlete with sessions').toBeTruthy();
 
     await page.goto(athleteHref!);

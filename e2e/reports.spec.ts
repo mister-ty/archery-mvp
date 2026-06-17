@@ -10,7 +10,9 @@ test.describe('Reports (F10) — CSV + PDF exports', () => {
     const athleteHrefs = await page
       .locator('a[href^="/deportistas/"]')
       .evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-    const athleteHref = athleteHrefs.find((h) => h.length > '/deportistas/'.length);
+    const athleteHref = athleteHrefs.find(
+      (h) => h.startsWith('/deportistas/') && !h.endsWith('/nuevo')
+    );
     expect(athleteHref, 'at least one athlete should exist for this test').toBeTruthy();
     const athleteId = athleteHref!.split('/').pop()!;
 
@@ -31,7 +33,9 @@ test.describe('Reports (F10) — CSV + PDF exports', () => {
     const athleteHrefs = await page
       .locator('a[href^="/deportistas/"]')
       .evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-    const athleteHref = athleteHrefs.find((h) => h.length > '/deportistas/'.length);
+    const athleteHref = athleteHrefs.find(
+      (h) => h.startsWith('/deportistas/') && !h.endsWith('/nuevo')
+    );
     expect(athleteHref).toBeTruthy();
     const athleteId = athleteHref!.split('/').pop()!;
 

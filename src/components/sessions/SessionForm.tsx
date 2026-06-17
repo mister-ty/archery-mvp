@@ -163,22 +163,10 @@ export default function SessionForm({ athletes }: { athletes: AthleteOpt[] }) {
       <button
         type="submit"
         disabled={isPending}
-        className="h-14 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-lg transition active:scale-[0.99] disabled:opacity-60"
+        className="h-14 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-lg transition active:scale-[0.99] hover:bg-primary-hover disabled:opacity-60"
       >
         {isPending ? 'Creando…' : 'Crear sesión'}
       </button>
-
-      <style>{`
-        .input {
-          height: 3rem;
-          width: 100%;
-          border-radius: 0.5rem;
-          border: 1px solid hsl(var(--border));
-          background: hsl(var(--background));
-          padding: 0 0.75rem;
-        }
-        .input:focus { outline: none; box-shadow: 0 0 0 2px hsl(var(--ring)); }
-      `}</style>
     </form>
   );
 }

@@ -50,7 +50,13 @@ function roundOrNull(n: number | null, decimals = 2): number | null {
 // ── F5: Athlete dashboard ─────────────────────────────────────────────────────
 
 export type AthleteDashboardData = {
-  athlete: { id: string; firstName: string; lastName: string };
+  athlete: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    bowModality: string;
+    category: string;
+  };
   kpis: {
     avgLast30: number | null;
     bestRound: number | null;
@@ -112,7 +118,13 @@ export async function getAthleteDashboard(
 
   const athlete = await db.athlete.findUnique({
     where: { id: athleteId },
-    select: { id: true, firstName: true, lastName: true }
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      bowModality: { select: { name: true } },
+      category: { select: { name: true } }
+    }
   });
   if (!athlete) return null;
 
@@ -280,7 +292,13 @@ export async function getAthleteDashboard(
   };
 
   return {
-    athlete,
+    athlete: {
+      id: athlete.id,
+      firstName: athlete.firstName,
+      lastName: athlete.lastName,
+      bowModality: athlete.bowModality.name,
+      category: athlete.category.name
+    },
     kpis: {
       avgLast30: avgLast30 !== null ? Number(avgLast30.toFixed(1)) : null,
       bestRound,
